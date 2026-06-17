@@ -57,16 +57,21 @@ Prerequisites for voice/TTS
 - Python packages: `gTTS` and `PyNaCl` are included in `requirements.txt`.
 
 Deploying on Railway
-1. Create a new Railway project and connect your GitHub repo.
-2. Set environment variables:
-   - `CONTROLLER_TOKEN` = your Discord controller bot token
+1. Create a new Railway project and connect your GitHub repo (crxxralt1/chicken).
+2. Railway will auto-detect the `Procfile` and start the bot.
+3. Set environment variables in Railway:
+   - `CONTROLLER_TOKEN` = your Discord controller bot token (required)
    - `PORT` = (optional, defaults to 5000)
-3. Set the start command:
-   ```
-   pip install -r requirements.txt && python src/bot.py
-   ```
-4. Railway will expose the web server at your project's public URL.
-5. Access the dashboard at `https://<your-railway-url>/`
+4. Deploy — Railway will automatically run `python src/bot.py`
+5. Access your web dashboard at: `https://<your-railway-domain>/`
+
+**Quick Railway Setup:**
+- Go to [Railway.app](https://railway.app)
+- Click "New Project" → "Deploy from GitHub"
+- Select `crxxralt1/chicken`
+- Add environment variables (see step 3 above)
+- Click deploy
+- View logs and live status in Railway dashboard
 
 Security and policy note:
 - This tool runs client connections for tokens you provide. Do not use tokens for other users, and ensure you comply with Discord's Terms of Service.

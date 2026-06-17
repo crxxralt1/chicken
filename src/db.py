@@ -3,7 +3,8 @@ import sqlite3
 from datetime import datetime
 from typing import List, Dict, Any
 
-DB_PATH = os.path.join(os.getcwd(), 'data', 'tokens.db')
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'data', 'tokens.db')
 
 
 def ensure_db():
@@ -112,14 +113,3 @@ def import_from_config_sync(path: str = os.path.join(os.getcwd(), 'data', 'confi
         if add_token_sync(t, None):
             added += 1
     return added
-
-
-def remove_token_by_id_sync(token_id: int) -> bool:
-    ensure_db()
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute('DELETE FROM tokens WHERE id = ?', (token_id,))
-    changed = cur.rowcount
-    conn.commit()
-    conn.close()
-    return changed > 0

@@ -3,20 +3,26 @@ import os
 import json
 import asyncio
 from discord.ext import commands
-from discord.ext.commands import CommandInvokeError
-import token_runner
 import discord
-import db
+from src import db, token_runner
 
-CONFIG_PATH = os.path.join(os.getcwd(), 'data', 'config.json')
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, 'data', 'config.json')
 
 
 def load_config():
-    with open(CONFIG_PATH, 'r') as f:
-        return json.load(f)
+    try:
+        with open(CONFIG_PATH, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    except Exception as exc:
+        print(f'[bot] Failed to load config: {exc}')
+        return {}
 
 
 def save_config(data):
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
     with open(CONFIG_PATH, 'w') as f:
         json.dump(data, f, indent=2)
 

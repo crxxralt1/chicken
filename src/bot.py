@@ -185,18 +185,6 @@ async def listtokens(ctx):
 
 @bot.command(name='exportconfig')
 async def exportconfig(ctx):
-    await asyncio.to_thread(db.export_to_config_sync)
-    await ctx.send('Exported tokens to data/config.json')
-
-
-@bot.command(name='importconfig')
-async def importconfig(ctx):
-    added = await asyncio.to_thread(db.import_from_config_sync)
-    await ctx.send(f'Imported {added} tokens from data/config.json')
-
-
-@bot.command(name='exportconfig')
-async def exportconfig(ctx):
     rows = await asyncio.to_thread(db.list_tokens_sync)
     config = load_config()
     config['tokens'] = [

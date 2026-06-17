@@ -1,11 +1,13 @@
 import os
-from flask import Flask, render_template_string
+import asyncio
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from src.bot import bot, data
 import db
 import token_runner
 
-app = Flask(__name__)
+app = FastAPI(title='Discord Token Controller')
 
-# Simple HTML templates
 HOME_HTML = """
 <!DOCTYPE html>
 <html>
@@ -26,8 +28,8 @@ HOME_HTML = """
         <h1>Discord Token Controller Bot</h1>
         <div class="info">
             <div class="stat"><b>Status:</b> ✅ Running</div>
-            <div class="stat"><b>Clients Active:</b> {{ active_clients }}</div>
-            <div class="stat"><b>Stored Tokens:</b> {{ token_count }}</div>
+            <div class="stat"><b>Clients Active:</b> {active_clients}</div>
+            <div class="stat"><b>Stored Tokens:</b> {token_count}</div>
         </div>
         <div class="info">
             <h3>Navigation</h3>
@@ -63,27 +65,7 @@ STORAGE_HTML = """
     <div class="container">
         <h1>Token Storage</h1>
         <p><a href="/">← Back</a></p>
-        {% if tokens %}
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Token (Masked)</th>
-                <th>Label</th>
-                <th>Added</th>
-            </tr>
-            {% for token in tokens %}
-            <tr>
-                <td>{{ token.id }}</td>
-                <td class="token">{{ token.masked }}</td>
-                <td>{{ token.label or 'N/A' }}</td>
-                <td>{{ token.added_at[:10] }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        <p><b>Total:</b> {{ tokens|length }} tokens stored</p>
-        {% else %}
-        <p>No tokens stored yet.</p>
-        {% endif %}
+        {token_rows}
     </div>
 </body>
 </html>
@@ -145,36 +127,58 @@ HELP_HTML = """
 """
 
 
-@app.route('/')
+@app.get('/', response_class=HTMLResponse)
 def home():
     rows = db.list_tokens_sync()
-    token_count = len(rows)
     active_clients = len(token_runner.clients)
-    return render_template_string(HOME_HTML, token_count=token_count, active_clients=active_clients)
+    return HTMLResponse(content=HOME_HTML.format(active_clients=active_clients, token_count=len(rows)))
 
 
-@app.route('/storage')
+@app.get('/storage', response_class=HTMLResponse)
 def storage():
     rows = db.list_tokens_sync()
-    tokens = []
-    for row in rows:
-        token = row['token']
-        masked = token[:4] + '...' + token[-4:] if len(token) > 8 else '****'
-        tokens.append({
-            'id': row['id'],
-            'token': token,
-            'masked': masked,
-            'label': row['label'],
-            'added_at': row['added_at']
-        })
-    return render_template_string(STORAGE_HTML, tokens=tokens)
+    if not rows:
+        token_rows = '<p>No tokens stored yet.</p>'
+    else:
+        row_html = '<table>\n            <tr>\n                <th>ID</th>\n                <th>Token (Masked)</th>\n                <th>Label</th>\n                <th>Added</th>\n            </tr>\n'
+        for row in rows:
+            token = row['token']
+            masked = token[:4] + '...' + token[-4:] if len(token) > 8 else '****'
+            label = row['label'] or 'N/A'
+            added_at = row['added_at'][:10] if row['added_at'] else ''
+            row_html += f'            <tr>\n                <td>{row["id"]}</td>\n                <td class="token">{masked}</td>\n                <td>{label}</td>\n                <td>{added_at}</td>\n            </tr>\n'
+        row_html += f'        </table>\n        <p><b>Total:</b> {len(rows)} tokens stored</p>\n'
+        token_rows = row_html
+
+    content = STORAGE_HTML.format(token_rows=token_rows)
+    return HTMLResponse(content=content)
 
 
-@app.route('/help')
+@app.get('/help', response_class=HTMLResponse)
 def help_page():
-    return render_template_string(HELP_HTML)
+    return HTMLResponse(content=HELP_HTML)
 
 
-def run_web_server(port=5000):
-    """Run Flask server on the given port."""
-    app.run(host='0.0.0.0', port=port, debug=False)
+async def _start_controller_bot():
+    controller_token = os.environ.get('CONTROLLER_TOKEN') or data.get('controller_token')
+    if not controller_token:
+        raise RuntimeError('CONTROLLER_TOKEN must be set as an environment variable for deployment.')
+    print('[web] Starting controller bot')
+    try:
+        await bot.start(controller_token)
+    except Exception as exc:
+        print(f'[web] Controller bot failed to start: {exc}')
+        raise
+
+
+@app.on_event('startup')
+async def startup_event():
+    if getattr(app.state, 'bot_task', None) is None:
+        app.state.bot_task = asyncio.create_task(_start_controller_bot())
+
+
+@app.on_event('shutdown')
+async def shutdown_event():
+    if getattr(app.state, 'bot_task', None) is not None:
+        await bot.close()
+        app.state.bot_task.cancel()

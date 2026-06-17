@@ -2,13 +2,11 @@
 import os
 import json
 import asyncio
-import threading
 from discord.ext import commands
 from discord.ext.commands import CommandInvokeError
 import token_runner
 import discord
 import db
-import web
 
 CONFIG_PATH = os.path.join(os.getcwd(), 'data', 'config.json')
 
@@ -37,13 +35,6 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     print(f'[controller] Logged in as {bot.user} (id: {bot.user.id})')
-    # start web server in background thread if not already running
-    if not hasattr(on_ready, 'web_started'):
-        port = int(os.environ.get('PORT', 5000))
-        web_thread = threading.Thread(target=web.run_web_server, args=(port,), daemon=True)
-        web_thread.start()
-        on_ready.web_started = True
-        print(f'[web] Server started on http://0.0.0.0:{port}')
 
 
 @bot.command(name='h')

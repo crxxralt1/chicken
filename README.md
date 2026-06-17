@@ -16,14 +16,14 @@ pip install -r requirements.txt
 ```
 2. Set your controller bot token. For local testing edit `data/config.json` and set `controller_token`,
    or when deploying (e.g. Railway) set the environment variable `CONTROLLER_TOKEN`.
-3. Run the controller locally:
+3. Run the site and controller locally:
 ```
-python src/bot.py
+uvicorn src.web:app --host 0.0.0.0 --port 5000
 ```
 
 Web Server:
-- The bot also runs a Flask web server on port 5000 (or `$PORT` env var).
-- Access it at `http://localhost:5000`
+- The project now uses FastAPI with `uvicorn` for production-ready hosting.
+- Access it at `http://localhost:5000` or `https://<your-railway-domain>/`
 - Routes:
   - `/` — bot status and info
   - `/storage` — view stored tokens (masked)
@@ -58,11 +58,11 @@ Prerequisites for voice/TTS
 
 Deploying on Railway
 1. Create a new Railway project and connect your GitHub repo (crxxralt1/chicken).
-2. Railway will auto-detect the `Procfile` and start the bot.
+2. Railway will auto-detect the `Procfile` and start the site and bot.
 3. Set environment variables in Railway:
    - `CONTROLLER_TOKEN` = your Discord controller bot token (required)
    - `PORT` = (optional, defaults to 5000)
-4. Deploy — Railway will automatically run `python src/bot.py`
+4. Deploy — Railway will automatically run `uvicorn src.web:app --host 0.0.0.0 --port $PORT`
 5. Access your web dashboard at: `https://<your-railway-domain>/`
 
 **Quick Railway Setup:**
